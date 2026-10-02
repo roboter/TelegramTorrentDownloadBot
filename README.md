@@ -15,17 +15,24 @@ This repository is a .NET 10 file-based app. It does not need a solution or
 `.csproj` file. The Telegram bot dependency is declared at the top of `main.cs`
 with `#:package Telegram.Bot@22.10.0.1`.
 
-Before running, edit `main.cs` and update:
+Before running, create a `.env` file in the project root and configure:
 
-- `allowedUsers` with your Telegram user IDs
-- `incomingFolder` if you want to save files somewhere other than
-  `/opt/torrentbot/incoming`
+- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token from BotFather
+- `ALLOWED_USERS` - Comma-separated list of Telegram user IDs allowed to use the bot (get these from @userinfobot)
+- `INCOMING_FOLDER` - (Optional) Folder where torrent files will be saved, defaults to `~/Downloads`
+
+Example `.env` file:
+```
+TELEGRAM_BOT_TOKEN="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+ALLOWED_USERS="123456789,987654321,111222333"
+INCOMING_FOLDER="/opt/torrentbot/incoming"
+```
 
 Make sure the incoming folder is writable by the user running the bot:
 
 ```bash
-sudo mkdir -p /opt/torrentbot/incoming
-sudo chown "$USER" /opt/torrentbot/incoming
+mkdir -p /opt/torrentbot/incoming
+chmod 755 /opt/torrentbot/incoming
 ```
 
 ## Check
@@ -36,10 +43,10 @@ dotnet run main.cs
 
 ## Run
 
-Set your bot token and start the app:
+The bot will automatically load settings from the `.env` file. Make sure you have
+created the `.env` file as described above, then start the app:
 
 ```bash
-export TELEGRAM_BOT_TOKEN="your_bot_token_here"
 dotnet run main.cs
 ```
 
@@ -55,9 +62,8 @@ To create a release build in `publish/`:
 dotnet publish main.cs -c Release -o publish -p:PublishAot=false
 ```
 
-Run the published app with:
+Run the published app with (make sure `.env` file is in the same directory as the executable):
 
 ```bash
-export TELEGRAM_BOT_TOKEN="your_bot_token_here"
 ./publish/main
 ```

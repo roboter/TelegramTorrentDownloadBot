@@ -1,6 +1,3 @@
-#:package Telegram.Bot@22.10.0.1
-#:package System.Text.Encoding.CodePages@10.0.0
-
 using System;
 using System.IO;
 using System.Net.Http;
@@ -20,6 +17,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        LoadDotEnv();
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
         var botToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
@@ -32,12 +30,18 @@ class Program
 
         var bot = new TelegramBotClient(botToken);
 
-        var allowedUsers = new HashSet<long>
-        {
-        /// ADD USER ID HERE
-        };
+        var allowedUsersStr = Environment.GetEnvironmentVariable("ALLOWED_USERS") ?? "";
+        var allowedUsers = new HashSet<long>(
+            allowedUsersStr.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(id => id.Trim())
+                .Where(id => long.TryParse(id, out _))
+                .Select(id => long.Parse(id))
+        );
 
-        var incomingFolder = ExpandPath("~/Downloads");
+        var incomingFolderPath = Environment.GetEnvironmentVariable("INCOMING_FOLDER");
+        var incomingFolder = !string.IsNullOrWhiteSpace(incomingFolderPath)
+            ? ExpandPath(incomingFolderPath)
+            : ExpandPath("~/Downloads");
         Directory.CreateDirectory(incomingFolder);
 
         using var cts = new CancellationTokenSource();
@@ -59,6 +63,33 @@ class Program
         Console.ReadLine();
 
         cts.Cancel();
+    }
+
+    static void LoadDotEnv()
+    {
+        var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+        if (!File.Exists(envFilePath))
+            return;
+
+        foreach (var line in File.ReadAllLines(envFilePath))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#") || !trimmed.Contains("="))
+                continue;
+
+            var parts = trimmed.Split('=', 2);
+            var key = parts[0].Trim();
+            var value = parts[1].Trim();
+
+            // Remove surrounding quotes if present
+            if (value.StartsWith("\"") && value.EndsWith("\"") && value.Length >= 2)
+                value = value.Substring(1, value.Length - 2);
+            else if (value.StartsWith("'") && value.EndsWith("'") && value.Length >= 2)
+                value = value.Substring(1, value.Length - 2);
+
+            // Set the environment variable (overrides existing ones)
+            Environment.SetEnvironmentVariable(key, value);
+        }
     }
 
     static async Task HandleUpdate(
